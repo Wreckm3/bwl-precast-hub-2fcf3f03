@@ -1,16 +1,21 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, Product } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatKES } from "@/lib/currency";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Upload, Image as ImageIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminProducts() {
   const { data: products, isLoading } = useProducts();
+  const { toast } = useToast();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   
   const [isEditing, setIsEditing] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
@@ -34,6 +39,39 @@ export default function AdminProducts() {
     }
     setIsEditing(false);
     setEditingProduct(null);
+  };
+
+  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !editingProduct) return;
+    setUploading(true);
+    const newUrls: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop();
+      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("images").upload(path, file);
+      if (error) {
+        toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+        continue;
+      }
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+      newUrls.push(urlData.publicUrl);
+    }
+
+    setEditingProduct({
+      ...editingProduct,
+      images: [...(editingProduct.images || []), ...newUrls],
+    });
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveImage = (index: number) => {
+    if (!editingProduct) return;
+    const updated = [...(editingProduct.images || [])];
+    updated.splice(index, 1);
+    setEditingProduct({ ...editingProduct, images: updated });
   };
 
   const handleEdit = (product: Product) => {
@@ -97,6 +135,49 @@ export default function AdminProducts() {
               />
               <span>Available</span>
             </label>
+
+            {/* Image Upload */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Product Images</label>
+              <div className="flex flex-wrap gap-3">
+                {(editingProduct.images || []).map((url, i) => (
+                  <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-border group">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(i)}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-accent hover:text-accent transition-colors"
+                >
+                  {uploading ? (
+                    <span className="text-xs">Uploading...</span>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5" />
+                      <span className="text-xs">Add</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleUploadImages}
+              />
+            </div>
+
             <Button onClick={handleSave}>Save Product</Button>
           </div>
         </div>
