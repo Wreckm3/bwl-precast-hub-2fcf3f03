@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { formatKES } from "@/lib/currency";
-import { Shield, Clock, Award, Truck, ArrowRight, CheckCircle, Phone } from "lucide-react";
+import { Shield, Clock, Award, Truck, ArrowRight, CheckCircle, MessageCircle } from "lucide-react";
 import heroImage from "@/assets/hero-construction.jpg";
 import concreteTexture from "@/assets/concrete-texture.jpg";
 
@@ -37,11 +37,8 @@ export default function Index() {
               <Button variant="hero" size="lg" asChild>
                 <Link to="/products">View Products <ArrowRight className="w-5 h-5" /></Link>
               </Button>
-              <Button variant="heroOutline" size="lg" asChild>
-                <Link to="/contact">Request Quote</Link>
-              </Button>
               <Button variant="accent" size="lg" asChild>
-                <a href="tel:+254799994758"><Phone className="w-5 h-5 mr-2" /> Call Now</a>
+                <a href="https://wa.me/254799994758" target="_blank" rel="noopener noreferrer"><MessageCircle className="w-5 h-5" /> WhatsApp Us</a>
               </Button>
             </div>
           </div>
